@@ -2,7 +2,7 @@ import { FeeHeads } from "./fee_heads.js";
 export default (fee_engine_result, prod_result) => {
     const compare = (fee_engine_obj, prod_object, fee_head) => {
         if (fee_engine_obj && prod_object) {
-            let is_matched = fee_engine_obj.amount === prod_object.amount;
+            let is_matched = fee_engine_obj.amount.toFixed(2) === prod_object.amount.toFixed(2);
             return {
                 fee_head,
                 is_matched,

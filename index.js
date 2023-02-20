@@ -83,6 +83,7 @@ async function main () {
 	// console.log()
 	// prod_connection.end();
 	// new_connection.end();
+	let application_id = 255229;
 	const application = await sql`
 	SELECT row_to_json(t)
 	FROM (
@@ -116,7 +117,7 @@ async function main () {
 	-- 	bt.purpose_of_building not in ('Residential')
 	-- 	a.application_identifier IS NOT NULL
 	--   AND 
-		a.id = 255229
+		a.id = ${application_id}
 	--   AND l.ulb_grade IN (1,2,3)
 	  AND fee_details.fee_breakup IS NOT NULL
 	) t
@@ -154,7 +155,7 @@ async function main () {
 		...obj
 	}
 	let refined_obj = refine(application_obj);
-	console.log(refined_obj);
+	// console.log(refined_obj);
 	const payload = {
 		...refined_obj
 	  };
@@ -166,10 +167,33 @@ async function main () {
 		.catch(error => {
 		  console.error(error);
 		});
-		console.log(result.data);
-	const recon = await sql`select * from public.fee_details where application_id=255229`
-	console.log(recon[0].fee_breakup);
-	let results = recon_result(result.data, recon[0].fee_breakup);
+		// console.log(result.data);
+	const recon = await sql`select * from public.fee_details where application_id=${application_id}`
+	// console.log(recon[0].fee_breakup);
+	// console.log(recon_result(result.data, recon[0].fee_breakup).filter(ele => ele));
+	let results = recon_result(result.data, recon[0].fee_breakup).filter(ele => ele).map((element) => {
+		let fee_head = element.fee_head;
+		let engine_index = result.data.findIndex(function(result) {
+            return result.fee_head_name == fee_head
+          });
+		let fee_service_rate = result.data[engine_index].rate;
+		let is_rate_present = result.data[engine_index].matched_rates_count === 1 ? 'Yes': 'No';
+		return {
+			request_body: refined_obj,
+			application_id,
+			fee_head,
+			fee_engine_amount: element.engine,
+			database_amount: element.prod.amount,
+			fee_service_rate, // need update in the Engine
+			is_rate_present, // need update in the Engine
+			is_amount_matching: element.is_matched,
+			prod_result: recon[0].fee_breakup,
+			fee_engine_result: result.data,
+			prod_db_application_obj: application[0].row_to_json,
+			fee_engine_matched_rates_count: result.data[engine_index].matched_rates_count,//need update in the Engine
+		}
+	});
+	console.log(results);
 	process.exit(0)
 	// refine the result object from application
 
