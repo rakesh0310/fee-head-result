@@ -2,6 +2,7 @@
 import postgres from 'postgres'
 import { refine } from './refine_object.js'
 import axios from 'axios'
+import recon_result from './recons.js'
 
 // import XLSX from "xlsx"
 
@@ -165,9 +166,10 @@ async function main () {
 		.catch(error => {
 		  console.error(error);
 		});
-		console.log(result);
+		console.log(result.data);
 	const recon = await sql`select * from public.fee_details where application_id=255229`
 	console.log(recon[0].fee_breakup);
+	recon_result(result.data, recon[0].fee_breakup);
 	process.exit(0)
 	// refine the result object from application
 
