@@ -1,0 +1,28 @@
+export const FeeHeads = {
+    'betterment charges':'Betterment Charges',
+    'betterment charges and external betterment charges on builtup area':'Betterment and external betterment Charges on built up area',
+    'betterment charges and external betterment charges on site area':'Betterment and external betterment Charges on Site Area',
+    'building permit fee proposed builtup area':'Building Permit Fee',
+    'Building Permit Fees Advertisment & Postage Charges':'Postage/ Advertisement Charges',
+    'Building Permit Fees Proposed Compound Wall':'Compound Wall Fee',
+    'Debris Charges':'Debris Charges',
+    'development charges proposed built up area':'Development Charges on built up area(As per   G.O. Ms. No.225, dt: 30.08.2016 , G.O. Ms No. 226 and dt: 30.08.2016 ,G.O. Ms No. 223, dt: 30.08.2016)',
+    'development charges proposed vacant plot':'Vacant Plot Charges',
+    'vacant land tax':'Vacant Land Tax',
+    'Conversion Charges':'Conversion Charges',
+    'external betterment charges':'External Betterment Charges',
+    'rain water harvesting charges ':'Rain Water Harvesting Charges',
+    'site approval charges':'Site Approval Charges',
+    'development_charges_sitearea':'Development Charges on site area as per G.O.Ms No.223 MA, Dt:30-08-2016',
+    'development charges proposed open area exculding coverage':'Development charges on site area excluding coverage',
+    'special development charges (slip roads)':'Slip road charges', //HMDA
+    'sub division charges':'Sub Division Of Plot/ Amalgamation  Of Plot', //HMDA
+    'development charges for amenities built up area':'',
+    'vacant land tax ghmc':'',
+    'capitalization charges':'',
+    'environment impact fees':'',
+    'kokapet betterment charges':'',
+    'publication charges':'',
+    'special development charges (crmp)':'',
+    'shelter fees':'',
+}
