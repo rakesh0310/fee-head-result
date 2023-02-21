@@ -59,7 +59,7 @@ export const refine = (application) => {
     application.typeofmnc = typeofmnc[application.typeofmnc] || application.typeofmnc;
     application.subdivded = subdivded[application.subdivded] || 'No';
     application.vltpaid = vltpaid[application.vltpaid] || '';
-    application.fallsundersliproad = fallsundersliproad[application.fallsundersliproad];
+    application.fallsundersliproad = fallsundersliproad[application.fallsundersliproad] || '';
     if (application.fallsundersliproad) {
         application.sliproaddistance = parseInt(application.sliproaddistance);
     }
