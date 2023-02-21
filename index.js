@@ -83,44 +83,72 @@ async function main () {
 	// console.log()
 	// prod_connection.end();
 	// new_connection.end();
-	let application_id = 255229;
+	let application_id = 60693;
 	const application = await sql`
 	SELECT row_to_json(t)
-	FROM (
-	  SELECT a.application_identifier,
-			 a.property_id,
-			 a.id as application_id,
-			 p.total_built_up_area as total_builtup_area,
-			 p.plot_area_as_per_document as plotareasqmts,
-			 p.net_plot_area as net_plot_area,
-			 a.approval_for as permissiontype,
-			 bt.purpose_of_building as buildingusage,
-			 bt.building_subcategory as buildingsubusage,
-			 
-			 l.district_administration_area as authority,
-			 l.ulb_grade as typeofmnc,
-			 (
-			   select answer
-			   from application_answers
-			   where application_id = a.id
-			   and application_question_id = 17
-			   and answer in ('Open Plot or Piece of Land', 'Part Of Survey Number', 'Unapproved Layout','Construction Prior to 1-1-1985', 'Gramakantam/Abadi')
-			 ) as plotispartof
-	  FROM applications a
-	  INNER JOIN properties p ON a.property_id = p.id
-	  INNER JOIN locations l ON p.location_id = l.id
-	  INNER JOIN building_types bt ON bt.id = p.building_type_id
-	  INNER JOIN fee_details ON a.id = fee_details.application_id
-	  WHERE 
-	-- 	l.district_administration_area='GHMC'
-	--   AND 
-	-- 	bt.purpose_of_building not in ('Residential')
-	-- 	a.application_identifier IS NOT NULL
-	--   AND 
-		a.id = ${application_id}
-	--   AND l.ulb_grade IN (1,2,3)
-	  AND fee_details.fee_breakup IS NOT NULL
-	) t
+FROM (
+  SELECT a.application_identifier,
+         a.property_id,
+         a.id as application_id,
+         p.total_built_up_area as total_builtup_area,
+         p.plot_area_as_per_document as plotareasqmts,
+         p.net_plot_area as net_plot_area,
+         a.approval_for as permissiontype,
+		 fba.units as units,
+         bt.purpose_of_building as buildingusage,
+		 bt.building_subcategory as buildingsubusage,
+         l.district_administration_area as authority,
+         l.ulb_grade as typeofmnc,
+	     l.ulb_name as nameofmnc,
+         (
+           select answer
+           from application_answers
+           where application_id = a.id
+           and application_question_id = 17
+           and answer in ('Open Plot or Piece of Land', 'Part Of Survey Number', 'Unapproved Layout','Construction Prior to 1-1-1985', 'Gramakantam/Abadi')
+         ) as plotispartof,
+		(
+           select answer
+           from application_answers
+           where application_id = a.id
+           and application_question_id = 450
+         ) as fallsundersliproad,
+		(
+           select answer
+           from application_answers
+           where application_id = a.id
+           and application_question_id = 451
+         ) as sliproaddistance,
+		(
+           select answer
+           from application_answers
+           where application_id = a.id
+           and application_question_id = 3
+         ) as vltpaid,
+		(
+           select answer
+           from application_answers
+           where application_id = a.id
+           and application_question_id = 52
+         ) as subdivded
+  FROM applications a
+  INNER JOIN properties p ON a.property_id = p.id
+  INNER JOIN locations l ON p.location_id = l.id
+  INNER JOIN floor_builtup_areas fba ON fba.property_id = a.property_id
+  INNER JOIN building_types bt ON bt.id = p.building_type_id
+  INNER JOIN fee_details ON a.id = fee_details.application_id
+  WHERE 
+-- 	l.district_administration_area='GHMC'
+--   AND 
+-- 	bt.purpose_of_building not in ('Residential')
+-- 	a.application_identifier IS NOT NULL
+-- 	fba.units is not null
+--   AND 
+    a.id = ${application_id}
+--   AND l.ulb_grade IN (1,2,3)
+--   AND 
+-- 	fee_details.fee_breakup IS NOT NULL 
+) t;
 		`
 	console.log(application[0].row_to_json);
 	const obj = application[0].row_to_json;
@@ -152,32 +180,33 @@ async function main () {
 		amentiesbuiltuparea: 0,
 		compound_wall_length: 0,
 		vacant_plot_area: 0,
-		...obj
+		...obj,
 	}
 	let refined_obj = refine(application_obj);
-	// console.log(refined_obj);
+	console.log(refined_obj);
 	const payload = {
 		...refined_obj
 	  };
 	  
-	  const result = await axios.post('http://localhost:3000/dev/calculate', payload)
+	  const fee_engine_result = await axios.post('http://localhost:3000/dev/calculate', payload)
 		.then(response => {	
-		  return response.data;
+		  return response.data.data;
 		})
 		.catch(error => {
 		  console.error(error);
 		});
 		// console.log(result.data);
 	const recon = await sql`select * from public.fee_details where application_id=${application_id}`
-	// console.log(recon[0].fee_breakup);
+	console.log(fee_engine_result,recon[0]);
+	const prod_result = recon[0].fee_breakup ? recon[0].fee_breakup : recon[0].calculated_fee_breakup;
 	// console.log(recon_result(result.data, recon[0].fee_breakup).filter(ele => ele));
-	let results = recon_result(result.data, recon[0].fee_breakup).filter(ele => ele).map((element) => {
+	let results = recon_result(fee_engine_result, prod_result).filter(ele => ele).map((element) => {
 		let fee_head = element.fee_head;
-		let engine_index = result.data.findIndex(function(result) {
+		let engine_index = fee_engine_result.findIndex(function(result) {
             return result.fee_head_name == fee_head
           });
-		let fee_service_rate = result.data[engine_index].rate;
-		let is_rate_present = result.data[engine_index].matched_rates_count === 1 ? 'Yes': 'No';
+		let fee_service_rate = fee_engine_result[engine_index].rate;
+		let is_rate_present = fee_engine_result[engine_index].matched_rates_count === 1 ? 'Yes': 'No';
 		return {
 			request_body: refined_obj,
 			application_id,
@@ -188,9 +217,9 @@ async function main () {
 			is_rate_present, // need update in the Engine
 			is_amount_matching: element.is_matched,
 			prod_result: recon[0].fee_breakup,
-			fee_engine_result: result.data,
+			fee_engine_result: fee_engine_result,
 			prod_db_application_obj: application[0].row_to_json,
-			fee_engine_matched_rates_count: result.data[engine_index].matched_rates_count,//need update in the Engine
+			fee_engine_matched_rates_count: fee_engine_result[engine_index].matched_rates_count,//need update in the Engine
 		}
 	});
 	console.log(results);
