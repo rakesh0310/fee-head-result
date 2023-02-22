@@ -4,17 +4,33 @@ import postgres from "postgres";
 import { refine } from "./refine_object.js";
 import axios from "axios";
 import recon_result from "./recons.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 import XLSX from "xlsx";
 
+const host= process.env.DB_HOST; // Postgres ip address[es] or domain name[s]
+const port= process.env.DB_PORT; // Postgres server port[s]
+const database= process.env.DB_NAME; // Name of database to connect to
+const username= process.env.DB_USER; // Username of database user
+const password= process.env.DB_PASSWORD;
+const fee_engine_url = process.env.FEE_ENGINE_URL;
+if (!(host && port && database && username && password)) {
+  console.log("Database Configuration Missing from the ENV");
+  process.exit(0)
+}
+if (!(fee_engine_url)) {
+  console.log("Fee Engine Url Missing from the ENV");
+  process.exit(0)
+}
 const sql = postgres(
-  "postgres://postgres:hynodb321@tsbpass-prod-1108.cyhkueygisxj.ap-southeast-1.rds.amazonaws.com:5432/prod_tsbpass",
+  `postgres://${username}:${password}@${host}:${port}/${database}`,
   {
-    host: "tsbpass-prod-1108.cyhkueygisxj.ap-southeast-1.rds.amazonaws.com", // Postgres ip address[es] or domain name[s]
-    port: 5432, // Postgres server port[s]
-    database: "prod_tsbpass", // Name of database to connect to
-    username: "postgres", // Username of database user
-    password: "hynodb321", // Password of database user
+    host, // Postgres ip address[es] or domain name[s]
+    port, // Postgres server port[s]
+    database, // Name of database to connect to
+    username, // Username of database user
+    password, // Password of database user
     ssl: false, // true, prefer, require, tls.connect options
     max: 10, // Max number of connections
     max_lifetime: null, // Max lifetime in seconds (more info below)
@@ -25,66 +41,6 @@ const sql = postgres(
 );
 
 async function main() {
-  // let rejected = [];
-  // let completed = [];
-  // let prod_connection = await prod;
-  // let new_connection = await new_con;
-  // let getRows = (query) => new Promise((res, rej) => {
-  // 	prod_connection.query(query, function (error, results, fields) {
-  // 		if (error) rej(error);
-  // 		if (results) {
-  // 			res(results);
-  // 		}
-  // 	});
-  // });
-  // let putRows = (query,params) => new Promise((res, rej) => {
-  // 	new_connection.query(query, params, function (error, results, fields) {
-  // 		if (error) rej(error);
-  // 		if (results) {
-  // 			res(results);
-  // 		}
-  // 	});
-  // });
-
-  // let offset = 0;
-  // let limit = 100;
-  // while(1) {
-  // 	let getQuery = `SELECT * FROM u294228523_4Ubag.e20q_file_chunk limit ${limit} offset ${offset}`;
-
-  // 	let data = await getRows(getQuery).catch(error => {
-  // 		console.log(error);
-  // 		return null;
-  // 	});
-  // if (data === null || data.length === 0) {
-  // 	console.log("Done...");
-  // 	break;
-  // }
-  // let putQuery = 'INSERT INTO u294228523_4Ubag_new.e20q_file_chunk VALUES (?,?,?)';
-  // let promises = [];
-  // for (let i = 0; i < data.length; i++) {
-  // 	let file_id = data[i].file_id;
-  // 	let chunk_id = data[i].chunk_id;
-  // 	let filedata = Buffer.from(data[i].filedata);
-  // 	promises.push(putRows(putQuery, [file_id, chunk_id, filedata]).then((result) => {
-  // 		completed.push({file_id, chunk_id});
-  // 		console.log("Insert Success    ->", file_id, chunk_id, 'Affected Rows: ', result.affectedRows, 'warningCount: ', result.warningCount);
-  // 	}).catch((error) => {
-  // 		rejected.push({file_id, chunk_id});
-  // 		console.log("Insert Failed   ->", file_id, chunk_id, error);
-  // 	}));
-  // }
-  // await Promise.all(promises);
-  // console.log("Completed Rows -> ",offset + limit);
-  // console.log("Records Length -> ",data.length);
-  // offset += limit;
-  // if (offset === 6000) {
-  // 	console.log("Done...");
-  // 	break;
-  // }
-  // }
-  // console.log()
-  // prod_connection.end();
-  // new_connection.end();
   //   let application_id = [257415, 264970,  ];
   //   264970;
   //   257415;
@@ -205,7 +161,7 @@ FROM (
   };
 
   const fee_engine_result = await axios
-    .post("http://localhost:3001/dev/calculate", payload)
+    .post(fee_engine_url, payload)
     .then((response) => {
       return response.data.data;
     })
@@ -215,6 +171,14 @@ FROM (
   // console.log(result.data);
   const recon =
     await sql`select * from public.fee_details where application_id=${application_id}`;
+  if (!fee_engine_result) {
+	console.log(fee_engine_result, "Result of Fee Engine is Undefined")
+	process.exit(0);
+  }
+  if (!recon[0]) {
+	console.log(recon[0], "Recon Data is not Found")
+	process.exit(0);
+  };
   console.log(fee_engine_result, recon[0]);
   const prod_result = recon[0].fee_breakup
     ? recon[0].fee_breakup
